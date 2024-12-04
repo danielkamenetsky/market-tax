@@ -1,7 +1,8 @@
 package main
 
 import (
-	"fmt"
+	"html/template"
+	"log"
 	"net/http"
 	"strconv"
 )
@@ -14,33 +15,84 @@ func home(w http.ResponseWriter, r *http.Request) {
         http.NotFound(w, r)
         return
     }
-    w.Write([]byte("Market Tax - Welcome"))
-}
-
-func transactionView(w http.ResponseWriter, r *http.Request){
-	id, err := strconv.Atoi(r.URL.Query().Get("id"))
-	if err != nil || id < 1 {
-		http.NotFound(w, r)
-	return
-	}
-
-	fmt.Fprintf(w, "Display a specific transaction with ID %d...", id)
-}
-
-
-
-// Add a transactionCreate handler function
-func transactionCreate(w http.ResponseWriter, r *http.Request){
-	if r.Method != http.MethodPost {
-		w.Header().Set("Allow", http.MethodPost)
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		w.Write([]byte("Method Not Allowed"))
+	// Try to read template file 
+	ts, err := template.ParseFiles("./ui/html/pages/home.html")
+	if err != nil {
+		log.Print(err.Error())
+		http.Error(w, "Internal Server Error", 500)
 		return
 	}
+	err = ts.Execute(w, nil)
+	if err != nil {
+		log.Println(err.Error())
+		http.Error(w, "Internal Server Error", 500)
+	}
+}
 
-	w.Write([]byte("Create a new transaction"))
+func transactionView(w http.ResponseWriter, r *http.Request) {
+    id, err := strconv.Atoi(r.URL.Query().Get("id"))
+    if err != nil || id < 1 {
+        http.NotFound(w, r)
+        return
+    }
+
+    ts, err := template.ParseFiles("./ui/html/pages/view.html")
+    if err != nil {
+        log.Print(err.Error())
+        http.Error(w, "Internal Server Error", 500)
+        return
+    }
+
+    // Create data to pass to template
+    data := struct {
+        ID int
+    }{
+        ID: id,
+    }
+
+    err = ts.Execute(w, data)
+    if err != nil {
+        log.Print(err.Error())
+        http.Error(w, "Internal Server Error", 500)
+    }
+}
+
+// Add a transactionCreate handler function
+func transactionCreate(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodPost {
+        w.Header().Set("Allow", http.MethodPost)
+        
+        // Add template rendering for GET requests to show the form
+        ts, err := template.ParseFiles("./ui/html/pages/create.html")
+        if err != nil {
+            log.Print(err.Error())
+            http.Error(w, "Internal Server Error", 500)
+            return
+        }
+
+        err = ts.Execute(w, nil)
+        if err != nil {
+            log.Print(err.Error())
+            http.Error(w, "Internal Server Error", 500)
+        }
+        return
+    }
+
+    // Handle POST request here
+    w.Write([]byte("Create a new transaction"))
 }
 
 func transactionList(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("List all transactions..."))
+    ts, err := template.ParseFiles("./ui/html/pages/list.html")
+    if err != nil {
+        log.Print(err.Error())
+        http.Error(w, "Internal Server Error", 500)
+        return
+    }
+
+    err = ts.Execute(w, nil)
+    if err != nil {
+        log.Print(err.Error())
+        http.Error(w, "Internal Server Error", 500)
+    }
 }
